@@ -45,12 +45,12 @@ module Elasticsearch
       def initialize(file_name, client, features_to_skip = [])
         @name = file_name
         @client = client
+        @logger = Logger.new($stdout)
         begin
           documents = YAML.load_stream(File.new(file_name))
         rescue StandardError => e
-          logger = Logger.new($stdout)
-          logger.error e
-          logger.error "Filename : #{@name}"
+          @logger.error e
+          @logger.error "Filename : #{@name}"
         end
         @test_definitions = documents.reject { |doc| doc['setup'] || doc['teardown'] }
         @setup = documents.find { |doc| doc['setup'] }
@@ -355,16 +355,11 @@ module Elasticsearch
 
         def clear_indices(client)
           client.indices.delete(index: '*', expand_wildcards: 'all', ignore: 404)
-        end
+        rescue Elasticsearch::Transport::Transport::Errors::BadRequest => e
+          raise e unless e[:error][:root_cause].include?('is the write index for data stream')
 
-        def clear_indices_xpack(client)
-          indices = client.indices.get(index: '_all', expand_wildcards: 'all').keys.reject do |i|
-            i.start_with?('.security') || i.start_with?('.watches') || i.start_with?('.ds-')
-          end
-          indices.each do |index|
-            client.indices.delete_alias(index: index, name: '*', ignore: 404)
-            client.indices.delete(index: index, ignore: 404)
-          end
+          @logger.error e[:error][:root_cause][:type]
+          @logger.error e[:error][:root_cause][:reason]
         end
       end
     end
