@@ -164,9 +164,11 @@ module Elasticsearch
             wait_for_pending_tasks(client)
             clear_sml_policies(client)
           end
+
           clear_snapshots_and_repositories(client)
           clear_datastreams(client) if xpack?
           clear_indices(client)
+
           if xpack?
             clear_templates_xpack(client)
           else
@@ -326,7 +328,7 @@ module Elasticsearch
         end
 
         def clear_datastreams(client)
-          client.xpack.indices.delete_data_stream(name: '*')
+          client.xpack.indices.delete_data_stream(name: '*', expand_wildcards: 'all')
         end
 
         def clear_ml_jobs(client)
