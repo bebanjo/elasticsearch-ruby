@@ -153,7 +153,7 @@ module Elasticsearch
           'saml-service-provider', 'ilm-history', 'logs', 'logs-settings',
           'logs-mappings', 'metrics', 'metrics-settings', 'metrics-mappings',
           'synthetics', 'synthetics-settings', 'synthetics-mappings',
-          '.snapshot-blob-cache'
+          '.snapshot-blob-cache', '.deprecation-indexing-mappings', '.deprecation-indexing-settings'
         ].freeze
 
         # Wipe Cluster, based on PHP's implementation of ESRestTestCase.java:wipeCluster()
