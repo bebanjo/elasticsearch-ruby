@@ -60,6 +60,7 @@ describe 'XPack Rest API YAML tests' do
               Elasticsearch::RestAPIYAMLTests::TestFile.send(:clear_tasks, ADMIN_CLIENT)
               Elasticsearch::RestAPIYAMLTests::TestFile.send(:clear_rollup_jobs, ADMIN_CLIENT)
               Elasticsearch::RestAPIYAMLTests::TestFile.send(:clear_machine_learning_indices, ADMIN_CLIENT)
+              Elasticsearch::RestAPIYAMLTests::TestFile.send(:clear_datastreams, ADMIN_CLIENT)
               Elasticsearch::RestAPIYAMLTests::TestFile.send(:clear_indices_xpack, ADMIN_CLIENT)
               Elasticsearch::RestAPIYAMLTests::TestFile.send(:clear_transforms, ADMIN_CLIENT)
               Elasticsearch::RestAPIYAMLTests::TestFile.send(:clear_index_templates, ADMIN_CLIENT)
