@@ -176,12 +176,14 @@ module Elasticsearch
             client.indices.delete_index_template(name: '*')
             client.cluster.delete_component_template(name: '*')
           end
+
           clear_cluster_settings(client)
-          if xpack?
-            clear_ilm_policies(client)
-            clear_auto_follow_patterns(client)
-            clear_tasks(client)
-          end
+
+          return unless xpack?
+
+          clear_ilm_policies(client)
+          clear_auto_follow_patterns(client)
+          clear_tasks(client)
         end
 
         def xpack?
@@ -263,36 +265,6 @@ module Elasticsearch
           patterns['patterns'].each do |pattern|
             client.cross_cluster_replication.delete_auto_follow_pattern(name: pattern)
           end
-        end
-
-        # Prepare Elasticsearch for a single test file.
-        # This method deletes indices, roles, datafeeds, etc.
-        #
-        # @since 6.2.0
-        def clear_data(client)
-          clear_indices(client)
-          clear_index_templates(client)
-          clear_snapshots_and_repositories(client)
-        end
-
-        # Prepare Elasticsearch for a single test file.
-        # This method deletes indices, roles, datafeeds, etc.
-        #
-        # @since 6.2.0
-        def clear_data_xpack(client)
-          clear_roles(client)
-          clear_users(client)
-          clear_privileges(client)
-          clear_datastreams(client)
-          clear_datafeeds(client)
-          clear_ml_jobs(client)
-          clear_rollup_jobs(client)
-          clear_tasks(client)
-          clear_machine_learning_indices(client)
-          clear_indices_xpack(client)
-          clear_index_templates(client)
-          clear_snapshots_and_repositories(client)
-          clear_transforms(client)
         end
 
         private

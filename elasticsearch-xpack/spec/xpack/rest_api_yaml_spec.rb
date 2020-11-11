@@ -31,7 +31,6 @@ describe 'XPack Rest API YAML tests' do
     context "#{file.gsub("#{YAML_FILES_DIRECTORY}/", '')}" do
       before(:all) do
         # Runs once before all tests in a test file
-        # Elasticsearch::RestAPIYAMLTests::TestFile.clear_data_xpack(ADMIN_CLIENT)
         Elasticsearch::RestAPIYAMLTests::TestFile.wipe_cluster(ADMIN_CLIENT)
       end
 
