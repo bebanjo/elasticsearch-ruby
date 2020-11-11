@@ -141,6 +141,128 @@ module Elasticsearch
       end
 
       class << self
+        PRESERVE_ILM_POLICY_IDS = [
+          'ilm-history-ilm-policy', 'slm-history-ilm-policy',
+          'watch-history-ilm-policy', 'ml-size-based-ilm-policy', 'logs',
+          'metrics'
+        ].freeze
+
+        XPACK_TEMPLATES = [
+          '.watches', 'logstash-index-template', '.logstash-management',
+          'security_audit_log', '.slm-history', '.async-search',
+          'saml-service-provider', 'ilm-history', 'logs', 'logs-settings',
+          'logs-mappings', 'metrics', 'metrics-settings', 'metrics-mappings',
+          'synthetics', 'synthetics-settings', 'synthetics-mappings',
+          '.snapshot-blob-cache'
+        ].freeze
+
+        # Wipe Cluster, based on PHP's implementation of ESRestTestCase.java:wipeCluster()
+        # https://github.com/elastic/elasticsearch-php/blob/7.10/tests/Elasticsearch/Tests/Utility.php#L97
+        def wipe_cluster(client)
+          if xpack?
+            clear_rollup_jobs(client)
+            wait_for_pending_tasks(client)
+            clear_sml_policies(client)
+          end
+          clear_snapshots_and_repositories(client)
+          clear_datastreams(client) if xpack?
+          clear_indices(client)
+          if xpack?
+            clear_templates_xpack(client)
+          else
+            client.indices.delete_template(name: '*')
+            client.indices.delete_index_template(name: '*')
+            client.cluster.delete_component_template(name: '*')
+          end
+          clear_cluster_settings(client)
+          if xpack?
+            clear_ilm_policies(client)
+            clear_auto_follow_patterns(client)
+            clear_tasks(client)
+          end
+        end
+
+        def xpack?
+          ENV['TEST_SUITE'] == 'xpack'
+        end
+
+        def wait_for_pending_tasks(client)
+          filter = 'xpack/rollup/job'
+          loop do
+            results = client.cat.tasks(detailed: true).split("\n")
+            count = 0
+
+            time = Time.now.to_i
+            results.each do |task|
+              next if task.empty?
+
+              count += 1 if task.include?(filter)
+            end
+            break unless count.positive? && Time.now.to_i < (time + 30)
+          end
+        end
+
+        def clear_sml_policies(client)
+          policies = client.xpack.snapshot_lifecycle_management.get_lifecycle
+
+          policies.each do |name, _|
+            client.xpack.snapshot_lifecycle_management.delete_lifecycle(policy_id: name)
+          end
+        end
+
+        def clear_ilm_policies(client)
+          policies = client.xpack.ilm.get_lifecycle
+          policies.each do |policy|
+            client.xpack.ilm.delete_lifecycle(policy: policy[0]) unless PRESERVE_ILM_POLICY_IDS.include? policy[0]
+          end
+        end
+
+        def clear_cluster_settings(client)
+          # TODO
+          # settings = client.cluster.get_settings
+          # settings.each do |setting|
+          # end
+        end
+
+        def clear_templates_xpack(client)
+          templates = client.cat.templates(h: 'name').split("\n")
+
+          templates.each do |template|
+            next if xpack_template? template
+
+            begin
+              client.indices.delete_template(name: template)
+            rescue Elasticsearch::Transport::Transport::Errors::NotFound => e
+              if e.message.include?("index_template [#{template}] missing")
+                client.indices.delete_index_template(name: template)
+              end
+            end
+          end
+          # Delete component template
+          result = client.cluster.get_component_template
+
+          result['component_templates'].each do |template|
+            next if xpack_template? template['name']
+
+            client.cluster.delete_component_template(name: template['name'])
+          end
+        end
+
+        def xpack_template?(template)
+          xpack_prefixes = ['.monitoring', '.watch', '.triggered-watches', '.data-frame', '.ml-', '.transform'].freeze
+          xpack_prefixes.map { |a| return true if a.include? template }
+
+          XPACK_TEMPLATES.include? template
+        end
+
+        def clear_auto_follow_patterns(client)
+          patterns = client.cross_cluster_replication.get_auto_follow_pattern
+
+          patterns['patterns'].each do |pattern|
+            client.cross_cluster_replication.delete_auto_follow_pattern(name: pattern)
+          end
+        end
+
         # Prepare Elasticsearch for a single test file.
         # This method deletes indices, roles, datafeeds, etc.
         #
@@ -258,7 +380,7 @@ module Elasticsearch
         end
 
         def clear_indices(client)
-          client.indices.delete(index: '*', expand_wildcards: 'all')
+          client.indices.delete(index: '*', expand_wildcards: 'all', ignore: 404)
         end
 
         def clear_indices_xpack(client)
