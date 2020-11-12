@@ -43,7 +43,7 @@ Gem::Specification.new do |s|
   s.extra_rdoc_files  = [ 'README.md', 'LICENSE.txt' ]
   s.rdoc_options      = [ '--charset=UTF-8' ]
 
-  s.required_ruby_version = '>= 2.5'
+  s.required_ruby_version = '>= 2.3.3'
 
   s.add_development_dependency 'bundler'
   s.add_development_dependency 'rake', '~> 12.3'
